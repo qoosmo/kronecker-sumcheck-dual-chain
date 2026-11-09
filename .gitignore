@@ -4,3 +4,5 @@ note/*.fls
 note/*.fdb_latexmk
 note/*.out
 note/*.toc
+rust/target/
+rust/Cargo.lock

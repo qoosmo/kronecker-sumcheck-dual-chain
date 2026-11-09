@@ -1,0 +1,11 @@
+[package]
+name = "dual-chain"
+version = "0.1.0"
+edition = "2021"
+description = "Executable checks for the dual Kronecker chain IOP for hypercube sums (Goldilocks^3)"
+license = "MIT"
+
+[dependencies]
+
+[profile.test]
+opt-level = 2
