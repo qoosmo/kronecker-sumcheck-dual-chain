@@ -5,6 +5,8 @@ edition = "2021"
 description = "Executable checks for the dual Kronecker chain IOP for hypercube sums (Goldilocks^3)"
 license = "MIT"
 
+[workspace]
+
 [dependencies]
 
 [profile.test]
