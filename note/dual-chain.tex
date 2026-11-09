@@ -34,7 +34,7 @@ Sumcheck on Growing Domains, Polynomial-Valued FRI on Shrinking Domains}
 \maketitle
 
 \begin{abstract}
-We study an interactive oracle proof for the Boolean-hypercube sum $H=\sum_{b\in\{0,1\}^m} f(b)$ of a committed multilinear polynomial $f$. The protocol runs two synchronized chains on the same challenges $r_1,\dots,r_m$: a forward Kronecker--Sumcheck chain on growing multiplicative domains $D_0\subset\cdots\subset D_m$, and a backward polynomial-valued (symbolic) FRI chain on shrinking domains, whose leaves are polynomials in a formal variable $X$. Both chains terminate at $f(r_1X^{2^{m-1}},\dots,r_mX)$. We prove completeness for every $m$, show that in the exact-identity model both chains are deterministic bijections, give two explicit attacks on under-specified variants (one accepting a false sum with probability $1$), and prove a soundness theorem for the repaired protocol with the explicit bound $m/|\K|+2B(2^m-1)/|\K|+(1-\theta)^q$, $\theta=(1-1/B)/2$. For Goldilocks$^3$, $m=20$, $B=4$, this gives $q=189$ queries for $128$-bit interactive soundness. The binding argument for the polynomial-valued chain is proximity-gap free: it uses only injectivity of the formal fold. Its price is a proof of size $\Theta(2^m)$. Specializing $X:=1$ collapses the protocol to classical sumcheck interleaved with scalar FRI; for this succinct variant we prove evaluation binding from an elementary correlated-agreement lemma for lines, valid for every linear code, giving the bound $m/|\K|+3n/|\K|+(3/4)^q$ at $B=4$, hence $q=309$. The two variants are validated numerically by an accompanying Rust implementation.
+We study an interactive oracle proof for the Boolean-hypercube sum $H=\sum_{b\in\{0,1\}^m} f(b)$ of a committed multilinear polynomial $f$. The protocol runs two synchronized chains on the same challenges $r_1,\dots,r_m$: a forward Kronecker--Sumcheck chain on growing multiplicative domains $D_0\subset\cdots\subset D_m$, and a backward polynomial-valued (symbolic) FRI chain on shrinking domains, whose leaves are polynomials in a formal variable $X$. Both chains terminate at $f(r_1X^{2^{m-1}},\dots,r_mX)$. We prove completeness for every $m$, show that in the exact-identity model both chains are deterministic bijections, give two explicit attacks on under-specified variants (one accepting a false sum with probability $1$), and prove a soundness theorem for the repaired protocol with the explicit bound $m/|\K|+2B(2^m-1)/|\K|+(1-\theta)^q$, $\theta=(1-1/B)/2$. For Goldilocks$^3$, $m=20$, $B=4$, this gives $q=189$ queries for $128$-bit interactive soundness. The binding argument for the polynomial-valued chain is proximity-gap free: it uses only injectivity of the formal fold. Its price is a proof of size $\Theta(2^m)$. Specializing $X:=1$ collapses the protocol to classical sumcheck interleaved with scalar FRI; for this succinct variant we prove evaluation binding up to the unique-decoding radius, from a Berlekamp--Welch correlated-agreement lemma for Reed--Solomon lines over $\K(Z)$, with bound $m/|\K|+(n^2/3+4n+m)/|\K|+(1-\theta)^q$, again $q=189$. The two variants are validated numerically by an accompanying Rust implementation.
 \end{abstract}
 
 \tableofcontents
@@ -428,7 +428,7 @@ The weighting $X^{2^{m-i}}$ is therefore cosmetic once $X$ is specialized, and t
 Commit $s_0=F|_{D_m}$ and send $H$. For $i=1,\dots,m$: send $(u_i,v_i)\in\K^2$ in the clear, check $2u_i+v_i=c_{i-1}$ ($c_0=H$), sample $r_i$, set $c_i=u_i+r_iv_i$, commit the scalar FRI layer $g_i$ on $D_{m-i}$ folded with $r_i$. Finally check that $g_m$ is constant on $D_0$ with value $c_m$, and run $q$ FRI queries.
 \end{protocol}
 
-$\Pi_1$ is classical sumcheck for $\sum_bf(b)$ interleaved with scalar FRI on the Kronecker encoding, with shared challenges. The scalar fold is not injective, so Lemma~\ref{lem:treeB} does not transfer; the binding argument below replaces injectivity by an elementary correlated-agreement lemma for lines. Everything in this section holds verbatim for any family of linear codes $C_i\subseteq\K^{E_i}$ with the even/odd decomposition of Lemma~\ref{lem:pair}; Reed--Solomon is used only through that lemma and the value of the minimum distance.
+$\Pi_1$ is classical sumcheck for $\sum_bf(b)$ interleaved with scalar FRI on the Kronecker encoding, with shared challenges. The scalar fold is not injective, so Lemma~\ref{lem:treeB} does not transfer; the binding argument below replaces injectivity by a correlated-agreement lemma for lines. Two versions are proved: Lemma~\ref{lem:line} for any linear code (radius $(1-\rho)/3$) and Lemma~\ref{lem:rsline} for Reed--Solomon codes (radius $(1-\rho)/2$). The rest of the argument uses only the even/odd decomposition of Lemma~\ref{lem:pair} and the minimum distance.
 
 \subsection{Pair representation}
 
@@ -474,20 +474,71 @@ Let $D:=\{x:(e_x,o_x)\ne(E_x,O_x)\}$. For $x\in D$ the affine function $r\mapsto
 If $e,o$ are fixed and $r$ is uniform in $\K$, and no $E,O\in C$ satisfy $|\{x:(e_x,o_x)\ne(E_x,O_x)\}|\le t$, then $\Pr_r[r\in R]\le\max(2,t+1)/|\K|$.
 \end{corollary}
 
+\begin{lemma}[Correlated agreement for Reed--Solomon lines up to unique decoding]\label{lem:rsline}
+Let $C=\RS[\K,\Omega,k]$ with $|\Omega|=N$ and minimum distance $d=N-k+1$, let $t\ge0$ be an integer with $2t<d$, and let $e,o\in\K^\Omega$. With $R$ as in Lemma~\ref{lem:line}, if
+\[
+|R|\ \ge\ (k+2t)(N+1)+2,
+\]
+then there are $E',O'\in C$ with $|\{x\in\Omega:\ (e_x,o_x)\ne(E'(x),O'(x))\}|\le t$.
+\end{lemma}
+\begin{proof}
+\emph{The Berlekamp--Welch system over $\K[Z]$.}\quad Consider the unknowns $\xi_0,\dots,\xi_{t-1}$ and $\zeta_0,\dots,\zeta_{k+t-1}$, the polynomials
+\[
+\Gamma(X)=X^t+\sum_{j<t}\xi_jX^j,\qquad \Psi(X)=\sum_{j<k+t}\zeta_jX^j,
+\]
+and impose, for every $x\in\Omega$,
+\[
+\Psi(x)-\Gamma(x)\,(e_x+Z\,o_x)=0 .
+\]
+This is a linear system $M(Z)\,w=b(Z)$ with $N$ equations and $u=k+2t\le N$ unknowns, whose coefficients are affine in $Z$. Let $\varrho\le u$ be the rank of $M(Z)$ over the field $\K(Z)$.
+
+\emph{Step 1: specializations are solvable on $R$.} Let $r\in R$, let $P_r\in C$ be the codeword with at most $t$ disagreements with $w_r:=e+ro$ (unique since $2t<d$), and $\mathrm{Err}_r$ the disagreement set. Then $\Gamma_r:=(X-a)^{t-|\mathrm{Err}_r|}\prod_{x\in\mathrm{Err}_r}(X-x)$ (any $a\in\K$) is monic of degree $t$, $\Psi_r:=\Gamma_rP_r$ has degree $<k+t$, and both sides of the equation vanish at $x\in\mathrm{Err}_r$ and agree elsewhere. So $M(r)w=b(r)$ is solvable.
+
+\emph{Step 2: the system is solvable over $\K(Z)$.} Every $(\varrho+1)$-minor of $M(Z)$ is the zero polynomial, so $\operatorname{rank}M(r)\le\varrho$ for all $r$. If the augmented matrix $[M\,|\,b]$ had rank $\varrho+1$ over $\K(Z)$, some $(\varrho+1)$-minor of it would be a nonzero polynomial of degree at most $\varrho+1$; by Step 1 it vanishes at every $r\in R$, contradicting $|R|\ge\varrho+2$. Hence $[M\,|\,b]$ has rank $\varrho$.
+
+\emph{Step 3: a polynomial solution.} Choose rows $I$ and columns $J$ with $\Delta(Z):=\det M_{I,J}(Z)\ne0$, $|I|=|J|=\varrho$. Rows $I$ of $[M\,|\,b]$ are a basis of its row space (Step 2), so the vector with $w_J$ given by Cramer's rule on $M_{I,J}w_J=b_I$ and $w_j=0$ for $j\notin J$ solves the whole system. Each $w_j$ is $\Delta_j(Z)/\Delta(Z)$ with $\Delta_j$ a $\varrho\times\varrho$ minor of a matrix with affine entries, so $\deg\Delta_j\le\varrho$ and $\deg\Delta\le\varrho$. Clearing the denominator,
+\[
+\widetilde\Gamma(X,Z):=\Delta(Z)\,\Gamma(X),\qquad \widetilde\Psi(X,Z):=\Delta(Z)\,\Psi(X)
+\]
+are polynomials of $Z$-degree at most $\varrho$, $\widetilde\Gamma$ has $X$-degree $t$ with leading coefficient $\Delta(Z)$, $\deg_X\widetilde\Psi<k+t$, and
+\[
+\widetilde\Psi(x,Z)=\widetilde\Gamma(x,Z)\,(e_x+Z\,o_x)\qquad\text{in }\K[Z],\ \text{for every }x\in\Omega. \tag{$\ast$}
+\]
+
+\emph{Step 4: the common agreement set.} Let $S:=\{x\in\Omega:\ \widetilde\Gamma(x,Z)\ne0\text{ in }\K[Z]\}$. Each $x\in\Omega\setminus S$ is a root in $\K(Z)$ of the degree-$t$ polynomial $\widetilde\Gamma(X,Z)\in\K(Z)[X]$, so $|\Omega\setminus S|\le t$. Let
+\[
+R'':=\{r\in R:\ \Delta(r)\ne0\ \text{and}\ \widetilde\Gamma(x,r)\ne0\ \text{for all }x\in S\}.
+\]
+$\Delta$ and each $\widetilde\Gamma(x,Z)$, $x\in S$, are nonzero of degree at most $\varrho$, so $|R\setminus R''|\le\varrho(|S|+1)\le(k+2t)(N+1)$ and $|R''|\ge2$.
+
+\emph{Step 5: unique decoding at each $r\in R''$.} Specialize $(\ast)$ at $r$: $\widetilde\Psi(\cdot,r)=\widetilde\Gamma(\cdot,r)\,w_r$ on $\Omega$, with $\deg\widetilde\Gamma(\cdot,r)=t$ since $\Delta(r)\ne0$. The polynomial $\widetilde\Psi(\cdot,r)-\widetilde\Gamma(\cdot,r)P_r$ has degree $<k+t$ and vanishes on the at least $N-t$ points where $w_r=P_r$; since $k+t\le N-t$ (equivalent to $2t<d$), it is zero. For $x\in S$, $\widetilde\Gamma(x,r)\ne0$, hence
+\[
+e_x+r\,o_x=P_r(x)\qquad(x\in S,\ r\in R'').
+\]
+
+\emph{Step 6: conclusion.} Take distinct $r_1,r_2\in R''$ and put $O':=(P_{r_1}-P_{r_2})/(r_1-r_2)$, $E':=P_{r_1}-r_1O'$, both in $C$. Step 5 at $r_1,r_2$ gives $o_x=O'(x)$ and $e_x=E'(x)$ for all $x\in S$, and $|\Omega\setminus S|\le t$.
+\end{proof}
+
+\begin{corollary}\label{cor:rsline}
+In the setting of Lemma~\ref{lem:rsline}, if $e,o$ are fixed, $r$ is uniform in $\K$, and no $E',O'\in C$ have at most $t$ joint disagreements with $(e,o)$, then $\Pr_r[r\in R]\le\big((k+2t)(N+1)+1\big)/|\K|\le(N+1)^2/|\K|$.
+\end{corollary}
+
+
 \subsection{Binding of scalar FRI}
 
-Fix the radius
-\[
-\delta^\ast:=\frac{1-\rho}3,\qquad t_i:=\lceil\delta^\ast n_i\rceil-1 .
-\]
-Then ``$<\delta^\ast$'' and ``at most $t_i$ disagreements'' coincide on $E_i$, and $3t_i<(1-\rho)n_i<d_i$, so Lemma~\ref{lem:line} applies to every $C_i$; moreover $2\delta^\ast<\lambda_i$. For $B=4$: $\delta^\ast=\frac14$ and $t_i=L_i-1$.
+Fix a radius $\delta$ and set $t_i:=\lceil\delta n_i\rceil-1$, so that ``relative distance $<\delta$'' and ``at most $t_i$ disagreements'' coincide on $E_i$. We use one of two choices:
+\begin{itemize}[leftmargin=*]
+\item[(RS)] $\delta=\theta=\frac{1-\rho}2$. Then $2t_i<(1-\rho)n_i<d_i$, Lemma~\ref{lem:rsline} applies to every $C_i$, and we set $\epsilon_i:=(n_i+1)^2$.
+\item[(Lin)] $\delta=\delta^\ast=\frac{1-\rho}3$. Then $3t_i<d_i$, Lemma~\ref{lem:line} applies to any linear codes with the decomposition of Lemma~\ref{lem:pair}, and we set $\epsilon_i:=n_i$.
+\end{itemize}
+In both cases $2\delta\le1-\rho<\lambda_i$ for all $i$. For $B=4$: $\theta=\frac38$ and $\delta^\ast=\frac14$.
 
 \begin{definition}[Reference objects]\label{def:refs}
 In a run of $\Pi_1$:
 \begin{itemize}[leftmargin=*]
-\item $F_\star$ is the unique $F\in\K[Y]_{<L}$ with $\dist(s_0,F|_{D_m})<\delta^\ast$, if it exists; $f_\star=\kappa^{-1}(F_\star)$.
+\item $F_\star$ is the unique $F\in\K[Y]_{<L}$ with $\dist(s_0,F|_{D_m})<\delta$, if it exists; $f_\star=\kappa^{-1}(F_\star)$.
 \item $\varphi_0:=g_0$ and $\varphi_i:=\Fold_{r_i}(g_{i-1})$ for $1\le i\le m$ (the values the verifier recomputes).
-\item $G_j$ ($0\le j<m$) is the unique $G\in C_j$ with $\Delta(g_j,G)<\delta^\ast$, if it exists (unique by Lemma~\ref{lem:pair}(ii) and $2\delta^\ast<\lambda_j$). It is a function of $g_j$, hence fixed before $r_{j+1}$.
+\item $G_j$ ($0\le j<m$) is the unique $G\in C_j$ with $\Delta(g_j,G)<\delta$, if it exists (unique by Lemma~\ref{lem:pair}(ii) and $2\delta<\lambda_j$). It is a function of $g_j$, hence fixed before $r_{j+1}$.
 \item For a codeword $H\in C_j$, $H^{\to m}:=\Fold_{r_m}\circ\cdots\circ\Fold_{r_{j+1}}(H)$, a constant.
 \end{itemize}
 \end{definition}
@@ -495,16 +546,16 @@ In a run of $\Pi_1$:
 \begin{definition}[Bad rounds]
 Round $j+1$ ($0\le j<m$) is \emph{bad} if either
 \begin{enumerate}[label=(\alph*)]
-\item $G_j$ does not exist but $\dist(\varphi_{j+1},C_{j+1})<\delta^\ast$; or
+\item $G_j$ does not exist but $\dist(\varphi_{j+1},C_{j+1})<\delta$; or
 \item for some reference $H\in\{\Fold_{r_j}\circ\cdots\circ\Fold_{r_{i+1}}(G_i):\ 0\le i\le j,\ G_i\text{ exists}\}\subseteq C_j$ and some $z\in E_{j+1}$, the pairs of $g_j$ and $H$ differ at $z$ but $\Fold_{r_{j+1}}(g_j)(z)=\Fold_{r_{j+1}}(H)(z)$.
 \end{enumerate}
 \end{definition}
 
 \begin{lemma}\label{lem:badrounds}
-$\Pr[\text{some round is bad}]\le\dfrac{1}{|\K|}\sum_{j=1}^m(j+1)\,n_j\le\dfrac{3n}{|\K|}$.
+$\displaystyle\Pr[\text{some round is bad}]\le\frac{1}{|\K|}\sum_{i=1}^m\big(\epsilon_i+i\,n_i\big)$. In case (RS) this is at most $(n^2/3+4n+m)/|\K|$; in case (Lin) at most $3n/|\K|$.
 \end{lemma}
 \begin{proof}
-All objects in the definition of round $j+1$ are fixed before $r_{j+1}$ is sampled. (a) has probability at most $\max(2,t_{j+1}+1)/|\K|\le n_{j+1}/|\K|$ by Corollary~\ref{cor:line} applied to $(e_{g_j},o_{g_j})$ and $C_{j+1}$. For (b), each of the at most $j+1$ references and each $z$ contribute at most one value of $r_{j+1}$, so at most $(j+1)n_{j+1}/|\K|$. Sum over $j$, and use $\sum_{i\ge1}(i+1)2^{-i}=3$.
+All objects in the definition of round $i=j+1$ are fixed before $r_i$ is sampled. Clause (a) has probability at most $\epsilon_i/|\K|$ by Corollary~\ref{cor:rsline} (case RS) or Corollary~\ref{cor:line} (case Lin, $\max(2,t_i+1)\le n_i$), applied to $(e_{g_{i-1}},o_{g_{i-1}})$ and $C_i$. For clause (b), each of the at most $i$ references and each $z\in E_i$ contribute at most one value of $r_i$, so at most $i\,n_i/|\K|$. Summing with $n_i=n2^{-i}$: $\sum_i(n_i+1)^2\le n^2/3+2n+m$, $\sum_i i\,n_i\le2n$, and $\sum_i(i+1)n_i\le3n$.
 \end{proof}
 
 From now on fix a run with no bad round in which the final layer $g_m$ is the constant $c$ (otherwise the verifier rejects). For $0\le i\le m$ and a uniform $z\in E_i$ let $\mathrm{Pass}_i(z)$ be the event that the checks $g_k(w)=\varphi_k(w)$ hold at every node $w=z^{2^{k-i}}$, $i\le k\le m$. Then a query from uniform $y_0$ passes iff $\mathrm{Pass}_0(y_0)$ (at level $0$ the check $g_0=\varphi_0$ is vacuous).
@@ -517,20 +568,20 @@ Downward induction on $i$. For $i=m$: $\varphi_m(z)\ne H(z)=c=g_m(z)$, so the le
 \end{proof}
 
 \begin{lemma}[Detection]\label{lem:detect}
-For $0\le i\le m$ let $H_i$ be the unique $H\in C_i$ with $\dist(\varphi_i,H)<\delta^\ast$, if it exists. If $H_i$ does not exist, or $H_i^{\to m}\ne c$, then $\Pr_z[\mathrm{Pass}_i(z)]\le1-\delta^\ast$.
+For $0\le i\le m$ let $H_i$ be the unique $H\in C_i$ with $\dist(\varphi_i,H)<\delta$, if it exists. If $H_i$ does not exist, or $H_i^{\to m}\ne c$, then $\Pr_z[\mathrm{Pass}_i(z)]\le1-\delta$.
 \end{lemma}
 \begin{proof}
 Downward induction on $i$.
 
-\emph{$i=m$.} $C_m$ is the code of constants on $D_0$ and $\Pr_z[\mathrm{Pass}_m(z)]=\Pr_z[\varphi_m(z)=c]=1-\dist(\varphi_m,c)$. If $H_m$ does not exist, $\dist(\varphi_m,c)\ge\delta^\ast$. If $H_m\ne c$, then $\dist(\varphi_m,c)\ge\lambda_m-\dist(\varphi_m,H_m)>\lambda_m-\delta^\ast>\delta^\ast$.
+\emph{$i=m$.} $C_m$ is the code of constants on $D_0$ and $\Pr_z[\mathrm{Pass}_m(z)]=\Pr_z[\varphi_m(z)=c]=1-\dist(\varphi_m,c)$. If $H_m$ does not exist, $\dist(\varphi_m,c)\ge\delta$. If $H_m\ne c$, then $\dist(\varphi_m,c)\ge\lambda_m-\dist(\varphi_m,H_m)>\lambda_m-\delta>\delta$.
 
 \emph{$i<m$.} Note $\Pr_z[\mathrm{Pass}_i(z)]\le\Pr_w[\mathrm{Pass}_{i+1}(w)]$, since $w=z^2$ is uniform on $E_{i+1}$ and $\mathrm{Pass}_i(z)\subseteq\mathrm{Pass}_{i+1}(z^2)$.
 \begin{enumerate}[label=\arabic*.,leftmargin=*]
-\item \emph{$G_i$ does not exist.} Since round $i+1$ is not bad (clause (a)), $\dist(\varphi_{i+1},C_{i+1})\ge\delta^\ast$, so $H_{i+1}$ does not exist; by induction $\Pr[\mathrm{Pass}_{i+1}]\le1-\delta^\ast$.
-\item \emph{$G_i$ exists.} By Lemma~\ref{lem:pair}(iii), $\dist(\varphi_{i+1},\Fold_{r_{i+1}}G_i)\le\Delta(g_i,G_i)<\delta^\ast$, so $H_{i+1}=\Fold_{r_{i+1}}G_i$ and $H_{i+1}^{\to m}=G_i^{\to m}$.
+\item \emph{$G_i$ does not exist.} Since round $i+1$ is not bad (clause (a)), $\dist(\varphi_{i+1},C_{i+1})\ge\delta$, so $H_{i+1}$ does not exist; by induction $\Pr[\mathrm{Pass}_{i+1}]\le1-\delta$.
+\item \emph{$G_i$ exists.} By Lemma~\ref{lem:pair}(iii), $\dist(\varphi_{i+1},\Fold_{r_{i+1}}G_i)\le\Delta(g_i,G_i)<\delta$, so $H_{i+1}=\Fold_{r_{i+1}}G_i$ and $H_{i+1}^{\to m}=G_i^{\to m}$.
 \begin{enumerate}[label=2\alph*.]
-\item If $G_i^{\to m}\ne c$: by induction $\Pr[\mathrm{Pass}_{i+1}]\le1-\delta^\ast$.
-\item If $G_i^{\to m}=c$: by Lemma~\ref{lem:prop} with $H=G_i$, $\mathrm{Pass}_i(z)$ fails whenever $\varphi_i(z)\ne G_i(z)$, so $\Pr_z[\mathrm{Pass}_i(z)]\le1-\dist(\varphi_i,G_i)$. The hypothesis of the lemma says $H_i$ is absent or $H_i^{\to m}\ne c=G_i^{\to m}$, so in either case $H_i\ne G_i$; then $\dist(\varphi_i,G_i)\ge\delta^\ast$, directly if $H_i$ is absent and by $\dist(\varphi_i,G_i)\ge\lambda_i-\dist(\varphi_i,H_i)>\lambda_i-\delta^\ast>\delta^\ast$ otherwise.\qedhere
+\item If $G_i^{\to m}\ne c$: by induction $\Pr[\mathrm{Pass}_{i+1}]\le1-\delta$.
+\item If $G_i^{\to m}=c$: by Lemma~\ref{lem:prop} with $H=G_i$, $\mathrm{Pass}_i(z)$ fails whenever $\varphi_i(z)\ne G_i(z)$, so $\Pr_z[\mathrm{Pass}_i(z)]\le1-\dist(\varphi_i,G_i)$. The hypothesis of the lemma says $H_i$ is absent or $H_i^{\to m}\ne c=G_i^{\to m}$, so in either case $H_i\ne G_i$; then $\dist(\varphi_i,G_i)\ge\delta$, directly if $H_i$ is absent and by $\dist(\varphi_i,G_i)\ge\lambda_i-\dist(\varphi_i,H_i)>\lambda_i-\delta>\delta$ otherwise.\qedhere
 \end{enumerate}
 \end{enumerate}
 \end{proof}
@@ -538,35 +589,36 @@ Downward induction on $i$.
 \begin{theorem}[Evaluation binding of scalar FRI]\label{thm:bind}
 For every prover in the FRI part of $\Pi_1$, with $q$ independent uniform queries,
 \[
-\Pr\big[\text{accept}\ \wedge\ (F_\star\text{ absent}\ \vee\ c\ne f_\star(r_1,\dots,r_m))\big]\ \le\ \frac{3n}{|\K|}+(1-\delta^\ast)^q .
+\Pr\big[\text{accept}\ \wedge\ (F_\star\text{ absent}\ \vee\ c\ne f_\star(r_1,\dots,r_m))\big]\ \le\ \varepsilon_{\mathrm{fold}}+(1-\delta)^q,
 \]
+where $\varepsilon_{\mathrm{fold}}$ is the bound of Lemma~\ref{lem:badrounds}; in case (RS), $\varepsilon_{\mathrm{fold}}\le(n^2/3+4n+m)/|\K|$ and $\delta=\theta$.
 \end{theorem}
 \begin{proof}
-Outside the event of Lemma~\ref{lem:badrounds}, apply Lemma~\ref{lem:detect} at $i=0$: here $\varphi_0=g_0=s_0$, so $H_0=F_\star|_{D_m}$ when $F_\star$ exists, and $H_0^{\to m}=f_\star(r)$ by Lemma~\ref{lem:pair}(iv). Under the event in brackets each query passes with probability at most $1-\delta^\ast$, independently given the commitments.
+Outside the event of Lemma~\ref{lem:badrounds}, apply Lemma~\ref{lem:detect} at $i=0$: here $\varphi_0=g_0=s_0$, so $H_0=F_\star|_{D_m}$ when $F_\star$ exists, and $H_0^{\to m}=f_\star(r)$ by Lemma~\ref{lem:pair}(iv). Under the event in brackets each query passes with probability at most $1-\delta$, independently given the commitments.
 \end{proof}
 
 \subsection{Soundness of \texorpdfstring{$\Pi_1$}{Pi\_1}}
 
 \begin{definition}[Game for $\Pi_1$]
-$\widetilde P$ wins if the verifier accepts and either $F_\star$ (radius $\delta^\ast$) does not exist or $H\ne\sum_bf_\star(b)$.
+$\widetilde P$ wins if the verifier accepts and either $F_\star$ (radius $\theta$, as in Section~\ref{sec:sound}) does not exist or $H\ne\sum_bf_\star(b)$.
 \end{definition}
 
 \begin{theorem}[Soundness of $\Pi_1$]\label{thm:one}
-For every unbounded interactive oracle prover,
+In case (RS), for every unbounded interactive oracle prover,
 \[
-\Pr[\Win]\ \le\ \frac{m}{|\K|}+\frac{3n}{|\K|}+(1-\delta^\ast)^q,\qquad\delta^\ast=\frac{1-\rho}3 .
+\Pr[\Win]\ \le\ \frac{m}{|\K|}+\frac{n^2/3+4n+m}{|\K|}+(1-\theta)^q,\qquad\theta=\frac{1-\rho}2 .
 \]
 \end{theorem}
 \begin{proof}
 Outside the event of Theorem~\ref{thm:bind}, $F_\star$ exists and $c_m=c=f_\star(r)$. The sumcheck messages $(u_i,v_i)$ are sent before $r_i$, and the honest values $P_i^\star(1)=A_i^\star(r_1,\dots,r_i)$ depend on $f_\star$, which is fixed before $r_1$; Lemma~\ref{lem:pathA} with the single path through $x=1$ (one pair $(y,x)=(1,1)$ per round) bounds the event $H\ne H_\star$ by $m/|\K|$.
 \end{proof}
 
-\paragraph{Parameters.} For $B=4$: $\delta^\ast=\frac14$, $\log_2\frac43=0.41504$, and $(3/4)^{309}=2^{-128.25}$ while $(3/4)^{308}=2^{-127.83}$. With $3n/|\K|\approx2^{-168.4}$ and $m/|\K|\approx2^{-187.7}$, $q=309$ queries give interactive error below $2^{-128}$.
+\paragraph{Parameters.} For Goldilocks$^3$, $m=20$, $B=4$: $\theta=\frac38$ and $(5/8)^{189}=2^{-128.16}$ as for $\Pi_{\mathrm{dual}}$; $(n^2/3+4n+m)/|\K|\approx2^{-149.6}$ and $m/|\K|\approx2^{-187.7}$. Hence $q=189$ queries give interactive error below $2^{-128}$. In case (Lin), the same proof gives $m/|\K|+3n/|\K|+(3/4)^q$ for any foldable linear codes, i.e.\ $q=309$ at $B=4$.
 
-\paragraph{Cost of $\Pi_1$.} $2m$ scalars of sumcheck, and per query one pair and one Merkle path per level. With pairs grouped in leaves and $32$-byte digests this is $\sum_{i=0}^{m-1}\big(48+32(m-i+1)\big)=8320$ bytes per query, about $2.57$ MB for $q=309$ before path deduplication.
+\paragraph{Cost of $\Pi_1$.} $2m$ scalars of sumcheck, and per query one pair and one Merkle path per level. With pairs grouped in leaves and $32$-byte digests this is $\sum_{i=0}^{m-1}\big(48+32(m-i+1)\big)=8320$ bytes per query, about $1.57$ MB for $q=189$ before path deduplication.
 
-\begin{remark}[Radius]
-The radius $\delta^\ast=(1-\rho)/3$ comes from Lemma~\ref{lem:line}, which holds for every linear code. Reaching the unique-decoding radius $(1-\rho)/2$ for Reed--Solomon codes amounts to extending Lemma~\ref{lem:line} to $2t<d$, which needs the algebraic structure of RS codes (decoding the line $e+Zo$ over $\K(Z)$); with it, the argument above goes through unchanged and gives $q=189$, matching $\Pi_{\mathrm{dual}}$.
+\begin{remark}[Where the Reed--Solomon structure enters]
+Only clause (a) of the bad-round event uses the code beyond linearity: Lemma~\ref{lem:rsline} is the Berlekamp--Welch argument run over $\K(Z)$, and it is what lifts the radius from $(1-\rho)/3$ to $(1-\rho)/2$. Its error $(N+1)^2/|\K|$ is quadratic in the domain size; for $|\K|\approx2^{192}$ this costs nothing at $m=20$.
 \end{remark}
 
 %======================================================================
@@ -606,17 +658,17 @@ All deviations are within $1.8$ standard deviations $\sqrt{p(1-p)/2000}$. The ti
  & $\Pi_{\mathrm{dual}}$ (formal $X$) & $\Pi_1$ ($X:=1$) \\
 \midrule
 Chain A & pathwise sumcheck, one path, $\le2^{-169}$ & classical sumcheck, $m/|\K|$ \\
-Chain B binding & injective fold, deterministic, $(1-\theta)^q$, $\theta=\frac{1-\rho}2$ & line lemma, $3n/|\K|+(1-\delta^\ast)^q$, $\delta^\ast=\frac{1-\rho}3$ \\
+Chain B binding & injective fold, deterministic, $(1-\theta)^q$, $\theta=\frac{1-\rho}2$ & RS line lemma, $\frac{n^2/3+4n+m}{|\K|}+(1-\theta)^q$ \\
 Role of $r$ in chain B & none & essential \\
 Terminal link & $B$ full leaves equal, then $P_m(x_m)=T(x_m)$ & final layer constant $=c_m$ \\
-Queries ($128$ bits, $B=4$) & $189$ & $309$ \\
-Proof size ($m=20$) & $\approx0.85$ GB & $\approx2.6$ MB \\
+Queries ($128$ bits, $B=4$) & $189$ & $189$ \\
+Proof size ($m=20$) & $\approx0.85$ GB & $\approx1.6$ MB \\
 Verifier & $\Theta(L)$ & $O(q\,m)$ \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-The dual-chain design separates into a part that needs no proximity theory but is not succinct (the formal butterfly, bound by injectivity) and a succinct part bound by an elementary line lemma (scalar FRI). Remark~\ref{rem:half} shows that, for a single multilinear polynomial, the sum is the evaluation $2^mf(\frac12,\dots,\frac12)$; the sumcheck layer becomes necessary once the summand is a product (for instance $f\cdot g$ or $f\cdot\mathrm{eq}$), which is the natural next target for this construction.
+The dual-chain design separates into a part that needs no proximity theory but is not succinct (the formal butterfly, bound by injectivity) and a succinct part bound by a correlated-agreement lemma for lines (scalar FRI); both reach the unique-decoding radius $(1-\rho)/2$ and the same $189$ queries. Remark~\ref{rem:half} shows that, for a single multilinear polynomial, the sum is the evaluation $2^mf(\frac12,\dots,\frac12)$; the sumcheck layer becomes necessary once the summand is a product (for instance $f\cdot g$ or $f\cdot\mathrm{eq}$), which is the natural next target for this construction.
 
 \begin{thebibliography}{9}
 \bibitem{lfkn} C.~Lund, L.~Fortnow, H.~Karloff, N.~Nisan. Algebraic methods for interactive proof systems. \emph{J.\ ACM} 39(4), 1992.
