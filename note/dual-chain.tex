@@ -1,0 +1,477 @@
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=2.6cm]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{protocol}[theorem]{Protocol}
+
+\newcommand{\F}{\mathbb{F}}
+\newcommand{\K}{K}
+\newcommand{\RS}{\mathrm{RS}}
+\newcommand{\Fold}{\mathrm{Fold}}
+\newcommand{\rev}{\mathrm{rev}}
+\newcommand{\wt}{\mathrm{wt}}
+\newcommand{\Bad}{\mathsf{Bad}}
+\newcommand{\Win}{\mathsf{Win}}
+\newcommand{\Acc}{\mathsf{Acc}}
+\DeclareMathOperator{\dist}{d}
+
+\title{Hypercube Sums via a Dual Kronecker Chain:\\
+Sumcheck on Growing Domains, Polynomial-Valued FRI on Shrinking Domains}
+\author{Abdelali Mkhida\\ \small Algorizk}
+\date{November 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We study an interactive oracle proof for the Boolean-hypercube sum $H=\sum_{b\in\{0,1\}^m} f(b)$ of a committed multilinear polynomial $f$. The protocol runs two synchronized chains on the same challenges $r_1,\dots,r_m$: a forward Kronecker--Sumcheck chain on growing multiplicative domains $D_0\subset\cdots\subset D_m$, and a backward polynomial-valued (symbolic) FRI chain on shrinking domains, whose leaves are polynomials in a formal variable $X$. Both chains terminate at $f(r_1X^{2^{m-1}},\dots,r_mX)$. We prove completeness for every $m$, show that in the exact-identity model both chains are deterministic bijections, give two explicit attacks on under-specified variants (one accepting a false sum with probability $1$), and prove a soundness theorem for the repaired protocol with the explicit bound $m/|\K|+2B(2^m-1)/|\K|+(1-\theta)^q$, $\theta=(1-1/B)/2$. For Goldilocks$^3$, $m=20$, $B=4$, this gives $q=189$ queries for $128$-bit interactive soundness. The binding argument for the polynomial-valued chain is proximity-gap free: it uses only injectivity of the formal fold. Its price is a proof of size $\Theta(2^m)$. Specializing $X:=1$ collapses the protocol to classical sumcheck interleaved with scalar FRI (the BaseFold pattern); we isolate exactly which step then requires a proximity-gap theorem.
+\end{abstract}
+
+\tableofcontents
+
+%======================================================================
+\section{Setting and notation}
+%======================================================================
+
+\paragraph{Fields.} $k=\F_p$ with $p=2^{64}-2^{32}+1$ (Goldilocks), and $\K=\F_{p^3}$ a fixed cubic extension. All challenges are sampled uniformly from $\K$.
+
+\paragraph{Parameters.} $m\ge1$ is the number of variables, $L=2^m$, $B\ge2$ is the blowup (a power of two), $n=BL$. We require $n\mid p-1$. The rate is $\rho=1/B$ and the unique-decoding threshold is
+\[
+\theta:=\frac{1-\rho}{2}.
+\]
+
+\paragraph{Domains.} For $0\le i\le m$ let $D_i=\mu_{B2^i}\subset k^\times$ be the group of $B2^i$-th roots of unity, so $|D_i|=B2^i$ and $x\mapsto x^2$ maps $D_i$ two-to-one onto $D_{i-1}$. The shrinking domains are $E_j:=D_{m-j}$. The fibers of the top domain over $D_0$ are
+\[
+\Phi_z:=\{y\in D_m:\ y^L=z\},\qquad z\in D_0,\qquad |\Phi_z|=L .
+\]
+
+\paragraph{Index conventions.} For $S\subseteq[m]$ put
+\[
+j(S):=\sum_{k\in S}2^{k-1},\qquad j'(S):=\sum_{k\in S}2^{m-k}.
+\]
+Both $S\mapsto j(S)$ and $S\mapsto j'(S)$ are bijections $2^{[m]}\to\{0,\dots,L-1\}$. For an integer $0\le t<L$, $t_k$ denotes the bit of weight $2^{k-1}$, so $t=\sum_k t_k2^{k-1}$. For $1\le i\le m$ and $0\le t<2^i$ let $\rev_i(t):=\sum_{k=1}^{i}t_k2^{i-k}$.
+
+\paragraph{Polynomials.} The multilinear $f=\sum_{S\subseteq[m]}c_S\,X^S$ (with $X^S=\prod_{k\in S}X_k$) has Kronecker encoding
+\[
+F(Y):=f(Y,Y^2,\dots,Y^{2^{m-1}})=\sum_{S}c_S\,Y^{j(S)},\qquad \deg F<L.
+\]
+This is a $\K$-linear bijection between multilinear polynomials and $\K[Y]_{<L}$; we write $f=\kappa^{-1}(F)$. For $r=(r_1,\dots,r_m)\in\K^m$ define
+\[
+\beta_k(X):=r_kX^{2^{m-k}},\qquad f(\beta(X)):=f(\beta_1(X),\dots,\beta_m(X))=\sum_S c_S\Big(\prod_{k\in S}r_k\Big)X^{j'(S)}.
+\]
+For $0\le i\le m$ let $A_i(X_1,\dots,X_i):=\sum_{b\in\{0,1\}^{m-i}}f(X_1,\dots,X_i,b)$, so $A_m=f$ and $A_0=\sum_bf(b)$.
+
+\paragraph{Even/odd split.} Every $P\in\K[X]$ is uniquely $P(X)=E_P(X^2)+X\,O_P(X^2)$.
+
+\paragraph{Codes.} $\RS:=\RS[\K,D_m,L]=\{F|_{D_m}:\ F\in\K[Y]_{<L}\}$. Relative Hamming distance is $\dist(\cdot,\cdot)$. The minimum relative distance of $\RS$ is $\lambda=1-\rho+1/n>2\theta$.
+
+\begin{remark}[The target is an evaluation]\label{rem:half}
+Since $\sum_{b}\prod_{k\in S}b_k=2^{m-|S|}$,
+\[
+\sum_{b\in\{0,1\}^m}f(b)=\sum_S c_S\,2^{m-|S|}=2^m f\big(\tfrac12,\dots,\tfrac12\big).
+\]
+A hypercube sum of a single committed multilinear polynomial is therefore an evaluation claim at the point $(\frac12,\dots,\frac12)$. This identity explains the structure found below: both chains are re-encodings of the coefficient vector $(c_S)_S$, and the sum is a fixed linear functional of it.
+\end{remark}
+
+%======================================================================
+\section{The protocol}
+%======================================================================
+
+\subsection{Chain A: growing-domain Kronecker--Sumcheck}
+
+Oracles: $P_0:=H$ (a scalar); for $1\le i\le m$, tables $U_i,V_i:D_{i-1}\to\K$ and $P_i:D_i\to\K$.
+
+Round $i$: the prover commits to $(U_i,V_i)$; the verifier samples $r_i$; the prover commits to $P_i$. The intended relations are
+\[
+P_{i-1}(Y)=2U_i(Y)+V_i(Y),\qquad P_i(X)=U_i(X^2)+r_iX\,V_i(X^2).
+\]
+\textbf{Path check.} For a point $x_m\in D_m$ let $x_{i-1}:=x_i^2$. The verifier opens, for $i=1,\dots,m$:
+\begin{align*}
+&(\mathrm a_i)\quad P_{i-1}(x_{i-1})\overset?=2U_i(x_{i-1})+V_i(x_{i-1})\qquad(P_0:=H),\\
+&(\mathrm b_i)\quad P_i(x_i)\overset?=U_i(x_{i-1})+r_ix_i\,V_i(x_{i-1}).
+\end{align*}
+
+\subsection{Chain B: shrinking-domain polynomial-valued FRI}
+
+\paragraph{Leaf format.} A level-$i$ leaf ($0\le i\le m$) sits at $z\in E_i=D_{m-i}$ and is an element
+\[
+s_i(z,\cdot)\in\K[W]_{<2^i},\qquad\text{representing } S_i(z,X):=s_i(z,X^{2^{m-i}}).
+\]
+It is committed as its canonical vector of $2^i$ coefficients. Level $0$ is the committed table $s_0(y)\in\K$, $y\in D_m$ (the oracle $C_f$).
+
+\paragraph{Fold.} For $1\le i\le m$, $y\in E_{i-1}$, and $a,b\in\K[W]_{<2^{i-1}}$ put $e:=\frac{a+b}2$, $o:=\frac{a-b}{2y}$ and
+\[
+\Fold_{i,y}(a,b)(V):=e(V^2)+r_iV\,o(V^2)\ \in\K[V]_{<2^i}.
+\]
+With $V=X^{2^{m-i}}$ and $W=V^2=X^{2^{m-i+1}}$, this is exactly
+\[
+S_i(y^2,X)=\frac{S_{i-1}(y,X)+S_{i-1}(-y,X)}2+r_iX^{2^{m-i}}\,\frac{S_{i-1}(y,X)-S_{i-1}(-y,X)}{2y}.
+\]
+In round $i$, after $r_i$, the prover commits to the level-$i$ table $z\mapsto s_i(z,\cdot)$ on $E_i$.
+
+\begin{lemma}[Injectivity of the fold]\label{lem:inj}
+If $r_i\ne0$ and $y\ne0$, then $\Fold_{i,y}:\K[W]_{<2^{i-1}}^2\to\K[V]_{<2^i}$ is a linear bijection.
+\end{lemma}
+\begin{proof}
+$e(V^2)$ is supported on even powers and $r_iVo(V^2)$ on odd powers, so the image determines $(e,o)$; then $a=e+yo$, $b=e-yo$. Dimensions agree ($2\cdot2^{i-1}=2^i$).
+\end{proof}
+
+\paragraph{Chain-B query.} For $y_0\in D_m$ let $y_{i}:=y_{i-1}^2\in E_i$. The verifier opens $s_{i}(\pm y_{i})$ and $s_{i+1}(y_{i+1})$ for $0\le i<m$ (pairs $\{y,-y\}$ are grouped in one Merkle leaf), checks the leaf format, and checks $s_{i+1}(y_{i+1})=\Fold_{i+1,y_i}\big(s_i(y_i),s_i(-y_i)\big)$.
+
+\subsection{The repaired protocol}
+
+The three items marked (F1)--(F3) are not optional; Section~\ref{sec:attacks} shows what fails without (F1) and why (F2) is load-bearing.
+
+\begin{protocol}[$\Pi_{\mathrm{dual}}$]\label{prot:dual}\
+\begin{enumerate}[label=\arabic*.,leftmargin=*]
+\item Prover sends $C_f$ (oracle $s_0:D_m\to\K$) and $H$.
+\item For $i=1,\dots,m$: prover commits $(U_i,V_i)$ on $D_{i-1}$; verifier sends $r_i\leftarrow\K$; prover commits $P_i$ on $D_i$ and the chain-B level $s_i$ on $E_i$.
+\item Query phase (all commitments fixed):
+\begin{enumerate}[label=(\alph*)]
+\item[(F1)] Open all $B$ terminal leaves $s_m(z,\cdot)$, $z\in D_0$, in full; reject unless they are equal. Call the common value $T\in\K[X]_{<L}$.
+\item[(F2)] Every opened leaf must be a coefficient vector of length exactly $2^i$ at level $i$.
+\item[(F3)] Run $q$ chain-B queries from independent uniform $y_0^{(1)},\dots,y_0^{(q)}\in D_m$.
+\item[(A)] Run one chain-A path check from a point $x_m\in D_m$ (any choice, e.g.\ $x_m=y_0^{(1)}$), and check $P_m(x_m)=T(x_m)$.
+\end{enumerate}
+\item Accept iff all checks pass.
+\end{enumerate}
+\end{protocol}
+
+%======================================================================
+\section{Completeness}
+%======================================================================
+
+\begin{lemma}[Honest chain A]\label{lem:chainA}
+Define, for $1\le i\le m$,
+\[
+Q_i(Y,Z):=A_i\big(r_1Y^{2^{i-2}},r_2Y^{2^{i-3}},\dots,r_{i-1}Y,\ Z\big),\qquad Q_1(Y,Z):=A_1(Z),
+\]
+write $Q_i=U_i(Y)+Z\,V_i(Y)$, and set $P_i(X):=A_i(r_1X^{2^{i-1}},\dots,r_{i-1}X^2,r_iX)$, $P_0=A_0$. Then for all $i$:
+\begin{enumerate}[label=(\roman*)]
+\item $Q_i$ is affine in $Z$, and $\deg U_i,\deg V_i\le2^{i-1}-1$;
+\item $P_{i-1}(Y)=2U_i(Y)+V_i(Y)$;
+\item $P_i(X)=U_i(X^2)+r_iX\,V_i(X^2)$;
+\item $P_m(X)=f(\beta(X))$.
+\end{enumerate}
+\end{lemma}
+\begin{proof}
+(i) $A_i$ is multilinear; the $Y$-degree is at most $\sum_{t=0}^{i-2}2^t=2^{i-1}-1$. (ii) $Q_i(Y,0)+Q_i(Y,1)=A_{i-1}(r_1Y^{2^{i-2}},\dots,r_{i-1}Y)=P_{i-1}(Y)$, using $A_{i-1}(\cdot)=A_i(\cdot,0)+A_i(\cdot,1)$. (iii) $Q_i(X^2,r_iX)=A_i(r_1X^{2^{i-1}},\dots,r_{i-1}X^2,r_iX)=P_i(X)$. (iv) is (iii)'s definition at $i=m$, since $A_m=f$.
+\end{proof}
+
+\begin{lemma}[Honest chain B]\label{lem:chainB}
+Let $F=\sum_{t<L}c_tY^t$ and $s_0=F|_{D_m}$, and fold honestly. Then for $0\le i\le m$ and $z\in E_i$,
+\[
+s_i(z,V)=\sum_{t<L}c_t\ z^{\lfloor t/2^i\rfloor}\Big(\prod_{k\le i,\ t_k=1}r_k\Big)\,V^{\rev_i(t\bmod2^i)} .
+\]
+In particular $\deg_Vs_i<2^i$, and $S_m(z,X)=s_m(z,X)=f(\beta(X))$ for every $z\in D_0$.
+\end{lemma}
+\begin{proof}
+Induction on $i$; $i=0$ is the definition. Assume the formula at level $i-1$ and fix $y\in E_{i-1}$, $z=y^2$. Write $u=\lfloor t/2^{i-1}\rfloor$, so $t_i=u\bmod2$. Then $\frac{y^u+(-y)^u}{2}=y^u[t_i=0]$ and $\frac{y^u-(-y)^u}{2y}=y^{u-1}[t_i=1]$, and in both cases $y^{u-t_i}=z^{\lfloor t/2^i\rfloor}$. The term with $t_i=0$ goes to $V^{2\rev_{i-1}(t)}$, the term with $t_i=1$ to $r_iV^{1+2\rev_{i-1}(t)}$, and $\rev_i(t\bmod2^i)=2\rev_{i-1}(t\bmod2^{i-1})+t_i$. At $i=m$: $\lfloor t/L\rfloor=0$ and $X^{\rev_m(j(S))}=X^{j'(S)}$.
+\end{proof}
+
+\begin{corollary}[Completeness]
+The honest prover is accepted with probability $1$: all leaves are well formed, all $B$ terminal leaves equal $f(\beta)=P_m$, and every local check is an instance of Lemma~\ref{lem:chainA} or~\ref{lem:chainB}.
+\end{corollary}
+
+\begin{remark}[An earlier indexing bug]
+With the tempting definition
+\[
+Q_i(Y,Z)=A_i\big(r_1Y^{2^{i-1}},\dots,r_{i-1}Y^2,Z\big),
+\]
+identity (ii) would require the first of the following, whereas Lemma~\ref{lem:chainA} gives the second:
+\[
+P_{i-1}(Y)\overset?=A_{i-1}\big(r_1Y^{2^{i-1}},\dots,r_{i-1}Y^2\big),\qquad P_{i-1}(Y)=A_{i-1}\big(r_1Y^{2^{i-2}},\dots,r_{i-1}Y\big);
+\]
+the two differ for $i\ge2$ in general. Lemma~\ref{lem:chainA} is the consistent orientation.
+\end{remark}
+
+%======================================================================
+\section{The exact-identity model}
+%======================================================================
+
+Suppose every round relation holds as a polynomial identity, all $r_i\neq0$, and the leaves have the format (F2).
+
+\begin{proposition}[Chain A is invertible]\label{prop:Lambda}
+The map $(U_i,V_i)\mapsto P_i$ with $P_{i-1}=2U_i+V_i$ is inverted by $U_i=E_{P_i}$, $V_i=r_i^{-1}O_{P_i}$, so $P_{i-1}=2E_{P_i}+r_i^{-1}O_{P_i}$. Iterating,
+\[
+H=P_0=\Lambda_r(P_m),\qquad
+\Lambda_r\Big(\sum_{S}p_S\,X^{j'(S)}\Big):=\sum_S p_S\,2^{m-|S|}\prod_{k\in S}r_k^{-1}.
+\]
+If $P_m=f(\beta)$, i.e.\ $p_S=c_S\prod_{k\in S}r_k$, then $H=\sum_Sc_S2^{m-|S|}=\sum_bf(b)$.
+\end{proposition}
+\begin{proof}
+At round $i$ the lowest power $X^1$ of $P_i$ carries variable $X_i$, so the odd part corresponds to $i\in S$; the inverse step multiplies coefficients with $i\notin S$ by $2$ and those with $i\in S$ by $r_i^{-1}$. Compose over $i=m,\dots,1$ and use Remark~\ref{rem:half}.
+\end{proof}
+
+\begin{proposition}[Chain B is a bijective re-encoding]\label{prop:Bbij}
+For fixed $r$ with all $r_k\ne0$, $f\mapsto f(\beta)$ is a bijection from multilinear polynomials onto $\K[X]_{<L}$, and by Lemma~\ref{lem:inj} each fiber $\Phi_z$ of level~$0$ is mapped bijectively onto the terminal leaf $s_m(z,\cdot)$.
+\end{proposition}
+
+\begin{remark}\label{rem:norandom}
+In the exact-identity model, neither chain uses the randomness of $r$: chain A computes the fixed functional $\Lambda_r$, which on honest inputs is the $r$-independent value $\sum_bf(b)$, and chain B is a deterministic butterfly of $F$. In particular a prover cannot satisfy the recurrences with an alternative polynomial family, since the recurrences are invertible. All soundness content therefore lies in the passage from sampled checks to identities, which is where the query analysis of Section~\ref{sec:sound} lives.
+\end{remark}
+
+%======================================================================
+\section{Attacks on under-specified variants}\label{sec:attacks}
+%======================================================================
+
+\subsection{Fiber splitting: false sum accepted with probability one}
+
+Let $\Pi^-$ be $\Pi_{\mathrm{dual}}$ with (F1) replaced by: \emph{every check that needs a terminal value at $x_m$ (resp.\ at the end of a chain-B query) uses the leaf $s_m(x_m^{L},\cdot)$ (resp.\ $s_m(y_m,\cdot)$) of its own fiber.}
+
+Observe that both chains split into $B$ independent subtrees indexed by $z\in D_0$: in chain B, $\pm y$ and $y^2$ lie over the same $z$; in chain A, $x$ and $x^2$ satisfy $x^{2^i}=(x^2)^{2^{i-1}}$.
+
+\begin{proposition}\label{prop:fiber}
+For every multilinear $f_\star$ and every $H'\neq\sum_bf_\star(b)$ there is a prover for $\Pi^-$ whose initial table satisfies $\dist(s_0,F_\star)=B/n=1/L$ (so $F_\star=\kappa(f_\star)$ is its unique decoding) and which is accepted with probability $1$ claiming $H'$.
+\end{proposition}
+\begin{proof}
+For $z\in D_0$ pick $y_z\in\Phi_z$ and set
+\[
+h_z(Y):=\frac{Y^L-z}{Y-y_z}=\sum_{t=0}^{L-1}y_z^{\,L-1-t}Y^t .
+\]
+It vanishes on $\Phi_z\setminus\{y_z\}$ and $h_z(y_z)=Ly_z^{L-1}\ne0$. Let $\eta_z:=\kappa^{-1}(h_z)$. By Remark~\ref{rem:half},
+\[
+\sigma_z:=\sum_b\eta_z(b)=\sum_{t<L}y_z^{L-1-t}2^{m-\wt(t)}=y_z^{L-1}\prod_{k=1}^m\big(2+y_z^{-2^{k-1}}\big).
+\]
+For each $k$ at most $2^{k-1}$ elements of the coset $\Phi_z$ satisfy $y^{2^{k-1}}=-\frac12$, so at most $L-1<|\Phi_z|$ choices are excluded, and we may choose $y_z$ with $\sigma_z\ne0$. Put $\lambda_z:=(H'-H_\star)/\sigma_z$ with $H_\star:=\sum_bf_\star(b)$, and
+\[
+s_0(y):=F_\star(y)+\lambda_zh_z(y)\qquad(y\in\Phi_z).
+\]
+This differs from $F_\star$ exactly at the $B$ points $y_z$. On subtree $z$ the prover runs the honest prover (both chains, Lemmas~\ref{lem:chainA} and~\ref{lem:chainB}) for $g_z:=f_\star+\lambda_z\eta_z$, whose Kronecker encoding interpolates $s_0$ on $\Phi_z$. Every local check holds identically, the leaf $s_m(z,\cdot)=g_z(\beta)$ matches chain A on the same subtree, and $\sum_bg_z(b)=H_\star+\lambda_z\sigma_z=H'$ for every $z$, consistent with the single scalar $P_0=H'$.
+\end{proof}
+
+Under (F1) this prover is rejected with certainty: $g_z(\beta)=g_{z'}(\beta)$ would force $\lambda_zh_z=\lambda_{z'}h_{z'}$, but $h_z$ vanishes on $\Phi_z\setminus\{y_z\}$ while $h_{z'}(y)=(z-z')/(y-y_{z'})\ne0$ there.
+
+\subsection{Late commitment of the first round message}
+
+\begin{proposition}\label{prop:late}
+If $(U_1,V_1)$ is committed after $r_1$, then for any $H'\ne H_\star$ there is a prover that is honest in chain B and passes each independent uniform chain-A path with probability $1/2$.
+\end{proposition}
+\begin{proof}
+For each $y\in D_0$ choose a root $x_y\in D_1$ with $2r_1x_y\ne1$ and solve $2U+V=H'$, $U+r_1x_yV=P_1^\star(x_y)$ (determinant $2r_1x_y-1$). Commit $P_1:=P_1^\star$ and play honestly from round $2$ on. Only $(\mathrm b_1)$ can fail, and only when $x_1=-x_y$; for uniform $x_m$, $x_1=x_m^{2^{m-1}}$ is uniform on $D_1$.
+\end{proof}
+With the correct order the corresponding error is at most $2B(2^m-1)/|\K|$, about $2^{-169}$ (Lemma~\ref{lem:pathA}), so the late variant drops chain A from field-size soundness to $2^{-q_A}$ for $q_A$ paths.
+
+\subsection{Why (F2) is load-bearing}
+The detection argument (Lemma~\ref{lem:treeB}) walks up a query path and uses injectivity of $\Fold_{k,y}$ on the opened pair. On a query path only the path node is checked against its own children; the sibling is not. Lemma~\ref{lem:inj} gives injectivity only on $\K[W]_{<2^{k-1}}^2$, and without the format check a sibling could be an arbitrary polynomial of larger degree, for which $(a,b)\mapsto e(V^2)+r_iVo(V^2)$ has a nontrivial kernel. (F2) costs nothing and also fixes the leaf size at $2^i$ coefficients, which is what makes the cost bounds of Section~\ref{sec:cost} hold.
+
+%======================================================================
+\section{Soundness}\label{sec:sound}
+%======================================================================
+
+\subsection{The binding game}
+
+\begin{definition}[Reference polynomial]
+Given the committed oracle $s_0:D_m\to\K$, let $F_\star$ be the unique $F\in\K[Y]_{<L}$ with $\dist(s_0,F|_{D_m})<\theta$, if it exists (unique because $2\theta<\lambda$), and $f_\star:=\kappa^{-1}(F_\star)$, $H_\star:=\sum_bf_\star(b)$.
+\end{definition}
+
+\begin{definition}[Game]
+An unbounded interactive oracle prover $\widetilde P$ interacts with the verifier of Protocol~\ref{prot:dual}. $\widetilde P$ wins if the verifier accepts and either $F_\star$ does not exist or $H\neq H_\star$.
+\end{definition}
+
+Note that $F_\star$ is a function of $s_0$ alone, hence fixed before $r_1$ is sampled.
+
+\subsection{Chain A: pathwise sumcheck}
+
+Let $U_i^\star,V_i^\star,P_i^\star$ be the honest tables of Lemma~\ref{lem:chainA} for $f_\star$; they depend on $f_\star$ and $r_1,\dots,r_{i-1}$ only (and $P_i^\star$ also on $r_i$).
+
+\begin{lemma}[Pathwise sumcheck]\label{lem:pathA}
+Assume $F_\star$ exists. Let $\Bad_A$ be the event that for some $i$, some $y\in D_{i-1}$ and some $x$ with $x^2=y$,
+\[
+(U_i(y),V_i(y))\neq(U_i^\star(y),V_i^\star(y))\quad\text{and}\quad U_i(y)+r_ixV_i(y)=U_i^\star(y)+r_ixV_i^\star(y).
+\]
+Then $\Pr[\Bad_A]\le\sum_{i=1}^m2|D_{i-1}|/|\K|=2B(2^m-1)/|\K|$. Moreover, outside $\Bad_A$, for \emph{every} $x_m\in D_m$: if $H\ne H_\star$ and all checks $(\mathrm a_i),(\mathrm b_i)$ on the path from $x_m$ pass, then $P_m(x_m)\neq f_\star(\beta(x_m))$.
+\end{lemma}
+\begin{proof}
+Conditioned on the transcript before $r_i$, the tables $U_i,V_i,U_i^\star,V_i^\star$ are fixed and $r_i$ is uniform. For fixed $(y,x)$ with $(\Delta U,\Delta V):=(U_i-U_i^\star,V_i-V_i^\star)(y)\ne0$ and $x\ne0$, the affine function $r\mapsto\Delta U+rx\Delta V$ has at most one root. A union bound over $i$, $y$ and the two roots $x$ gives the probability bound.
+
+For the second claim let $\Delta_i:=P_i(x_i)-P_i^\star(x_i)$, with $\Delta_0=H-H_\star\ne0$. If $\Delta_{i-1}\neq0$ and $(\mathrm a_i)$ passes, then $2\Delta U+\Delta V=\Delta_{i-1}\ne0$ at $x_{i-1}$, so $(\Delta U,\Delta V)\ne0$; outside $\Bad_A$ the right-hand side of $(\mathrm b_i)$ differs from $P_i^\star(x_i)$, and since $(\mathrm b_i)$ passes, $\Delta_i\ne0$. By induction $\Delta_m\ne0$, and $P_m^\star=f_\star(\beta)$ by Lemma~\ref{lem:chainA}(iv).
+\end{proof}
+
+\begin{remark}
+Lemma~\ref{lem:pathA} needs no degree test on $P_i,U_i,V_i$, and one path suffices for any choice of $x_m$, including a fixed one. Wrongness propagates under pullback: a wrong value at $y$ forces wrong values at both square roots, so the error pattern of a false claim covers all of $D_m$, the opposite of FRI's distance decay.
+\end{remark}
+
+\subsection{Chain B: proximity-gap-free tree detection}
+
+\begin{lemma}[Tree detection]\label{lem:treeB}
+Assume all $r_k\ne0$, (F1) and (F2) pass with common terminal value $T$, and let $F'\in\K[Y]_{<L}$ be the unique polynomial with $\kappa^{-1}(F')(\beta)=T$ (Proposition~\ref{prop:Bbij}). Then every chain-B query started at $y_0$ with $s_0(y_0)\ne F'(y_0)$ rejects. Consequently
+\[
+\Pr\big[\text{all $q$ chain-B queries accept}\ \big|\ \text{commitments}\big]\le\big(1-\dist(s_0,F')\big)^q .
+\]
+\end{lemma}
+\begin{proof}
+Let $s_i'$ be the honest butterfly of $F'$ (Lemma~\ref{lem:chainB}); then $s_m'(z)=T$ for all $z\in D_0$, so $W_m=\emptyset$ where $W_i:=\{z\in E_i: s_i(z)\ne s_i'(z)\}$. Let $y_0\in W_0$ with ancestors $y_1,\dots,y_m$, and let $k\ge1$ be minimal with $y_k\notin W_k$. If the check at $y_k$ passed, then
+\[
+\Fold_{k,y_{k-1}}\big(s_{k-1}(y_{k-1}),s_{k-1}(-y_{k-1})\big)=s_k(y_k)=s'_k(y_k)=\Fold_{k,y_{k-1}}\big(s'_{k-1}(y_{k-1}),s'_{k-1}(-y_{k-1})\big),
+\]
+and since the opened leaves have the format (F2), Lemma~\ref{lem:inj} gives $s_{k-1}(y_{k-1})=s'_{k-1}(y_{k-1})$, contradicting $y_{k-1}\in W_{k-1}$. The queries are uniform and independent after $T$, hence $F'$, is fixed.
+\end{proof}
+
+\begin{lemma}[Distance to a wrong target]\label{lem:dist}
+If $F_\star$ does not exist, or exists and $F'\ne F_\star$, then $\dist(s_0,F')\ge\theta$.
+\end{lemma}
+\begin{proof}
+If $F_\star$ does not exist, $\dist(s_0,c)\ge\theta$ for every codeword $c$. Otherwise $\dist(s_0,F')\ge\lambda-\dist(s_0,F_\star)>\lambda-\theta>\theta$.
+\end{proof}
+
+\subsection{Main theorem}
+
+\begin{theorem}[Interactive soundness of $\Pi_{\mathrm{dual}}$]\label{thm:main}
+For every unbounded interactive oracle prover,
+\[
+\Pr[\Win]\ \le\ \frac{m}{|\K|}+\frac{2B(2^m-1)}{|\K|}+(1-\theta)^q .
+\]
+\end{theorem}
+\begin{proof}
+Partition the winning event.
+\begin{enumerate}[label=(\arabic*)]
+\item Some $r_k=0$: probability at most $m/|\K|$.
+\item All $r_k\ne0$, and $F_\star$ does not exist or $T\ne f_\star(\beta)$. Then $F'$ is well defined and either $F_\star$ is absent or $F'\ne F_\star$, so by Lemmas~\ref{lem:treeB} and~\ref{lem:dist} acceptance has probability at most $(1-\theta)^q$.
+\item All $r_k\ne0$, $F_\star$ exists, $T=f_\star(\beta)$, and $H\ne H_\star$. The check $P_m(x_m)=T(x_m)=f_\star(\beta(x_m))$ together with the chain-A path checks contradicts Lemma~\ref{lem:pathA} unless $\Bad_A$ holds.\qedhere
+\end{enumerate}
+\end{proof}
+
+\subsection{Parameters}
+
+For $\K=\F_{p^3}$ ($|\K|\approx2^{192}$), $m=20$, $B=4$ ($\theta=3/8$):
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+Term & Value & $\log_2$ \\
+\midrule
+$m/|\K|$ & $20/p^3$ & $-187.7$ \\
+$2B(2^m-1)/|\K|$ & $8(2^{20}-1)/p^3$ & $-169.0$ \\
+$(5/8)^{189}$ & & $-128.16$ \\
+$(5/8)^{188}$ & & $-127.48$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Hence $q=189$ chain-B queries and a single chain-A path give total interactive error below $2^{-128}$, and $q=189$ is minimal for this bound. This coincides with the unique-decoding query count of the line-binding symbolic-FRI protocol, as expected: both are governed by $(1-\theta)^q$.
+
+\begin{remark}[Compilation]
+Under the BCS transform with Merkle commitments in the random-oracle model, add $\varepsilon_{\mathrm{Merkle}}$, the probability that the prover finds a collision (at most $Q^2/2^{\lambda_h}$ for $Q$ queries and $\lambda_h$-bit digests). For the Fiat--Shamir NIZK, the query phase is a single round with error $(1-\theta)^q$ per attempt, so a prover with $Q$ hash queries gains a factor of about $Q$; compensate with grinding or with $q\ge(128+\log_2Q-g)/\log_2(8/5)$ for $g$ bits of proof-of-work.
+\end{remark}
+
+\begin{remark}[Beyond unique decoding]
+Lemma~\ref{lem:treeB} gives per-query detection $\dist(s_0,F')$ for the target $F'$ chosen by the prover. Above $\theta$ the target may be any codeword of the list around $s_0$, selected adaptively after $r$, so the winning condition must change to a list statement; the deterministic chain alone cannot bind to a single $f_\star$ there.
+\end{remark}
+
+%======================================================================
+\section{Costs}\label{sec:cost}
+%======================================================================
+
+All counts are in elements of $\K$ ($24$ bytes); $m=20$, $B=4$, $q=189$.
+
+\paragraph{Prover.}
+\begin{itemize}[leftmargin=*]
+\item Chain B: level $i$ has $B2^{m-i}$ leaves of $2^i$ coefficients, i.e.\ $BL$ elements per level, $mBL\approx8.39\cdot10^7$ elements ($\approx2.0$ GB) in total, computed in $O(mBL)$ field operations.
+\item Chain A: $\sum_{i=1}^m2B2^i\approx4BL\approx1.68\cdot10^7$ elements; the coefficients of all $A_i$ come from $O(L)$ partial sums, then one NTT per table.
+\end{itemize}
+
+\paragraph{Proof.} At level $i<m$ the opened data is at most $\min(q,B2^{m-i-1})\cdot2^{i+1}$ elements.
+\begin{center}
+\begin{tabular}{@{}lr@{}}
+\toprule
+Levels & Opened elements (upper bound) \\
+\midrule
+$0$--$13$ & $189\,(2^{15}-2)\approx6.19\cdot10^6$ \\
+$14$--$19$ (whole levels) & $6\cdot BL\approx2.52\cdot10^7$ \\
+terminal leaves (F1) & $BL\approx4.19\cdot10^6$ \\
+chain A (one path) & $3m=60$ \\
+\midrule
+total & $\approx3.56\cdot10^7$ ($\approx0.85$ GB) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Verifier.} $\Theta(L)$: reading $T$, evaluating $T(x_m)$, and fold checks whose cost equals the opened data. Once $T$ is read, the verifier could compute $H=\Lambda_r(T)$ directly, so in $\Pi_{\mathrm{dual}}$ chain A is redundant.
+
+%======================================================================
+\section{Collapse: specializing the formal variable}
+%======================================================================
+
+\begin{lemma}[Specialization]\label{lem:spec}
+Fix $x\in k^\times$ and put $\alpha_i:=r_ix^{2^{m-i}}$. Then:
+\begin{enumerate}[label=(\roman*)]
+\item the scalars $g_i(z):=S_i(z,x)$ satisfy the scalar FRI fold
+\[
+g_i(y^2)=\frac{g_{i-1}(y)+g_{i-1}(-y)}2+\alpha_i\,\frac{g_{i-1}(y)-g_{i-1}(-y)}{2y};
+\]
+\item along the chain-A path from $x_m=x$, with $(u_i,v_i):=(U_i,V_i)(x_{i-1})$, the checks $(\mathrm a_i),(\mathrm b_i)$ read
+\[
+P_{i-1}(x_{i-1})=2u_i+v_i,\qquad P_i(x_i)=u_i+\alpha_iv_i,
+\]
+which is classical sumcheck with round polynomial $u_i+Zv_i$ and challenge $\alpha_i$;
+\item the $\alpha_i$ are independent and uniform in $\K$.
+\end{enumerate}
+\end{lemma}
+\begin{proof}
+(i) and (ii) are substitution of $X=x$; note $x_i=x^{2^{m-i}}$ so $r_ix_i=\alpha_i$. (iii) $r_i\mapsto r_ix^{2^{m-i}}$ is a bijection of $\K$.
+\end{proof}
+
+The weighting $X^{2^{m-i}}$ is therefore cosmetic once $X$ is specialized, and the same $\alpha_i$ drives both chains. Taking $x=1$:
+
+\begin{protocol}[$\Pi_1$]\label{prot:one}
+Commit $s_0=F|_{D_m}$ and send $H$. For $i=1,\dots,m$: send $(u_i,v_i)\in\K^2$ in the clear, check $2u_i+v_i=c_{i-1}$ ($c_0=H$), sample $r_i$, set $c_i=u_i+r_iv_i$, commit the scalar FRI layer $g_i$ on $D_{m-i}$ folded with $r_i$. Finally check that $g_m$ is constant on $D_0$ with value $c_m$, and run $q$ FRI queries.
+\end{protocol}
+
+$\Pi_1$ is classical sumcheck for $\sum_bf(b)$ interleaved with scalar FRI on the Kronecker encoding, using shared challenges; this is the BaseFold pattern \cite{basefold} in the monomial basis, and it is the scalar-reduction structure of Sum-FRI.
+
+\begin{theorem}[Soundness of $\Pi_1$, conditional]\label{thm:one}
+Assume the evaluation-binding property of scalar FRI in the unique-decoding regime: for every prover, $\Pr[\text{FRI accepts}\wedge(F_\star\text{ absent}\vee c\ne f_\star(r))]\le\varepsilon_{\mathrm{bind}}(q)$, where $c$ is the common final value. Then
+\[
+\Pr[\Win]\le\frac{m}{|\K|}+\varepsilon_{\mathrm{bind}}(q).
+\]
+\end{theorem}
+\begin{proof}
+Outside the binding event, $c_m=f_\star(r)$, and Lemma~\ref{lem:pathA} with the single point $x=1$ (one pair $(y,x)=(1,1)$ per round) bounds the remaining event $H\ne H_\star$ by $m/|\K|$. Both bad events are defined relative to the same $f_\star$, which is fixed before $r_1$, so the union bound is valid despite the shared challenges.
+\end{proof}
+
+The hypothesis of Theorem~\ref{thm:one} is precisely where a proximity-gap or correlated-agreement theorem enters: the scalar fold is not injective, so Lemma~\ref{lem:treeB} does not transfer. In the unique-decoding regime it is supplied by the BaseFold analysis \cite{basefold}; in the list-decoding regime see \cite{habock}. The polynomial-valued chain of $\Pi_{\mathrm{dual}}$ buys exactly the removal of this hypothesis, at the price of a $\Theta(L)$ proof.
+
+\paragraph{Cost of $\Pi_1$.} $2m$ scalars of sumcheck, and per query one pair and one Merkle path per level. With pairs grouped in leaves and $32$-byte digests this is $\sum_{i=0}^{m-1}\big(48+32(m-i+1)\big)=8320$ bytes per query, about $1.57$ MB for $q=189$ before path deduplication.
+
+%======================================================================
+\section{Summary of the security relation}
+%======================================================================
+
+\begin{center}
+\begin{tabular}{@{}p{3.8cm}p{5.2cm}p{5.2cm}@{}}
+\toprule
+ & $\Pi_{\mathrm{dual}}$ (formal $X$) & $\Pi_1$ ($X:=1$) \\
+\midrule
+Chain A & pathwise sumcheck, one path, $\le2^{-169}$ & classical sumcheck, $m/|\K|$ \\
+Chain B binding & injective fold, deterministic, $(1-\theta)^q$ & scalar FRI, needs a proximity-gap theorem \\
+Role of $r$ in chain B & none & essential \\
+Terminal link & $B$ full leaves equal, then $P_m(x_m)=T(x_m)$ & final layer constant $=c_m$ \\
+Proof size ($m=20$) & $\approx0.85$ GB & $\approx1.6$ MB \\
+Verifier & $\Theta(L)$ & $O(q\,m)$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The dual-chain design thus separates cleanly into a part that needs no proximity theory but is not succinct (the formal butterfly) and a succinct part whose binding is exactly the evaluation-binding problem for scalar FRI. Remark~\ref{rem:half} shows that, for a single multilinear polynomial, the sum is the evaluation $2^mf(\frac12,\dots,\frac12)$; the sumcheck layer becomes necessary once the summand is a product (for instance $f\cdot g$ or $f\cdot\mathrm{eq}$), which is the natural next target for this construction.
+
+\begin{thebibliography}{9}
+\bibitem{lfkn} C.~Lund, L.~Fortnow, H.~Karloff, N.~Nisan. Algebraic methods for interactive proof systems. \emph{J.\ ACM} 39(4), 1992.
+\bibitem{fri} E.~Ben-Sasson, I.~Bentov, Y.~Horesh, M.~Riabzev. Fast Reed--Solomon interactive oracle proofs of proximity. ICALP 2018.
+\bibitem{bcs} E.~Ben-Sasson, A.~Chiesa, N.~Spooner. Interactive oracle proofs. TCC 2016-B.
+\bibitem{bciks} E.~Ben-Sasson, D.~Carmon, Y.~Ishai, S.~Kopparty, S.~Saraf. Proximity gaps for Reed--Solomon codes. FOCS 2020.
+\bibitem{basefold} H.~Zeilberger, B.~Chen, B.~Fisch. BaseFold: efficient field-agnostic polynomial commitment schemes from foldable codes. CRYPTO 2024; ePrint 2023/1705.
+\bibitem{habock} U.~Hab\"ock. Basefold in the list decoding regime. ePrint 2024/1571.
+\end{thebibliography}
+
+\end{document}
